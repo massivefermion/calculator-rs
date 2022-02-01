@@ -1,4 +1,4 @@
-pub const OPERATORS: [char; 5] = ['+', '-', '*', '/', '^'];
+pub const OPERATORS: [char; 5] = ['^', '*', '/', '+', '-'];
 pub const DELIMITERS: [char; 2] = ['(', ')'];
 pub const DECIMALS: [char; 2] = ['e', '.'];
 
@@ -18,6 +18,22 @@ pub enum Delimiter {
 pub enum Side {
     Open,
     Close,
+}
+
+#[derive(Debug)]
+pub enum Node {
+    Operation((Op, Vec<Node>)),
+    Number(f64),
+}
+
+#[derive(Debug)]
+pub enum Op {
+    Exponentiation,
+    Negation,
+    Multiplication,
+    Division,
+    Addition,
+    Subtraction,
 }
 
 pub fn make_delimiter(ch: char) -> Option<Delimiter> {
