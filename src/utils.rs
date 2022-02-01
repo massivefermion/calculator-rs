@@ -1,3 +1,5 @@
+use serde::Serialize;
+
 pub const OPERATORS: [char; 5] = ['^', '*', '/', '+', '-'];
 pub const DELIMITERS: [char; 2] = ['(', ')'];
 pub const DECIMALS: [char; 2] = ['e', '.'];
@@ -20,13 +22,13 @@ pub enum Side {
     Close,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub enum Node {
     Operation((Op, Vec<Node>)),
     Number(f64),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub enum Op {
     Exponentiation,
     Negation,

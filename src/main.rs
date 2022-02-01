@@ -16,10 +16,10 @@ fn main() {
 
     if args[1] == "eval" {
         let mut p = Parser::new(args[2].as_str());
-        println!("{:?}", p.eval());
+        println!("{}", p.eval());
     } else if args[1] == "ast" {
         let mut ast = AST::new(args[2].as_str());
-        println!("{:?}", ast.generate());
+        println!("{}", serde_json::to_string_pretty(&ast.generate()).unwrap());
     } else {
         panic!("invalid command");
     }
