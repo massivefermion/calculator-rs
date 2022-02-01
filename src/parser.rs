@@ -132,12 +132,29 @@ impl Parser<'_> {
                         let exponent = self.tokenizer.next();
                         match exponent {
                             None => panic!("unexpected end of expression"),
-                            Some(exponent) => match exponent {
-                                Token::Number(exponent) => {
-                                    result = f64::powf(result, exponent);
+                            Some(mut exponent_candidate) => {
+                                let mut sign = 1.0;
+                                if let Token::Operator(ch) = exponent_candidate {
+                                    if !['+', '-'].contains(&ch) {
+                                        panic!("unexpected token `{:?}`", exponent_candidate)
+                                    }
+                                    if ch == '-' {
+                                        sign *= -1.0;
+                                    }
+                                    match self.tokenizer.next() {
+                                        None => panic!("unexpected end of expression"),
+                                        Some(exponent) => match exponent {
+                                            Token::Number(_) => exponent_candidate = exponent,
+                                            _ => panic!("unexpected token `{:?}`", exponent),
+                                        },
+                                    }
                                 }
-                                _ => panic!("unexpected token `{:?}`", exponent),
-                            },
+                                if let Token::Number(exponent) = exponent_candidate {
+                                    result = f64::powf(result, sign * exponent);
+                                } else {
+                                    panic!("unexpected token `{:?}`", exponent_candidate)
+                                }
+                            }
                         }
                     }
                 }
