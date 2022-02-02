@@ -9,16 +9,10 @@ impl Iterator for Expression<'_> {
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            let current = self.chars.next();
-            if current.is_none() {
-                return None;
-            };
-
-            let current = current.unwrap();
-            if ['\t', ' '].contains(&current) {
-                continue;
+            match self.chars.next() {
+                Some('\t') | Some(' ') => continue,
+                current => return current,
             }
-            return Some(current);
         }
     }
 }
