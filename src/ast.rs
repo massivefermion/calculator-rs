@@ -110,7 +110,7 @@ impl AST<'_> {
         match self.tokenizer.peek() {
             Some(Token::Operator('^')) => {
                 self.tokenizer.next();
-                node = Node::Operation((Op::Exponentiation, vec![node, self.eval_term()]));
+                node = Node::Operation((Op::Exponentiation, vec![node, self.eval_factor()]));
             }
             _ => (),
         };

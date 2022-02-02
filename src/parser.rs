@@ -107,7 +107,7 @@ impl Parser<'_> {
         match self.tokenizer.peek() {
             Some(Token::Operator('^')) => {
                 self.tokenizer.next();
-                result = f64::powf(result, self.eval_term());
+                result = f64::powf(result, self.eval_factor());
             }
             _ => (),
         };
