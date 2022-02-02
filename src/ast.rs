@@ -44,31 +44,20 @@ impl AST<'_> {
             if self.tokenizer.peek().is_none() {
                 return node;
             }
+
             let peeked = self.tokenizer.peek().unwrap().clone();
             match peeked {
-                Token::Operator(op) => {
-                    if ['+', '-'].contains(&op) {
-                        self.tokenizer.next();
-                        let other_operand = self.eval_term();
-                        match op {
-                            '+' => {
-                                node = Node::Operation((Op::Addition, vec![node, other_operand]));
-                            }
-                            '-' => {
-                                node =
-                                    Node::Operation((Op::Subtraction, vec![node, other_operand]));
-                            }
-                            _ => {
-                                return node;
-                            }
-                        }
-                    } else {
-                        return node;
-                    }
+                Token::Operator('+') => {
+                    self.tokenizer.next();
+                    node = Node::Operation((Op::Addition, vec![node, self.eval_term()]));
                 }
-                _ => {
-                    return node;
+
+                Token::Operator('-') => {
+                    self.tokenizer.next();
+                    node = Node::Operation((Op::Subtraction, vec![node, self.eval_term()]));
                 }
+
+                _ => return node,
             }
         }
     }
@@ -80,37 +69,24 @@ impl AST<'_> {
             if self.tokenizer.peek().is_none() {
                 return node;
             }
+
             let peeked = self.tokenizer.peek().unwrap().clone();
             match peeked {
-                Token::Operator(op) => {
-                    if ['*', '/'].contains(&op) {
-                        self.tokenizer.next();
-                        let other_operand = self.eval_factor();
-                        match op {
-                            '*' => {
-                                node = Node::Operation((
-                                    Op::Multiplication,
-                                    vec![node, other_operand],
-                                ));
-                            }
-                            '/' => {
-                                node = Node::Operation((Op::Division, vec![node, other_operand]));
-                            }
-                            _ => {
-                                return node;
-                            }
-                        }
-                    } else {
-                        return node;
-                    }
+                Token::Operator('*') => {
+                    self.tokenizer.next();
+                    node = Node::Operation((Op::Multiplication, vec![node, self.eval_factor()]));
                 }
+
+                Token::Operator('/') => {
+                    self.tokenizer.next();
+                    node = Node::Operation((Op::Division, vec![node, self.eval_factor()]));
+                }
+
                 Token::Delimiter(Delimiter::Paranthesis(Side::Open)) => {
-                    let other_operand = self.eval_factor();
-                    node = Node::Operation((Op::Multiplication, vec![node, other_operand]));
+                    node = Node::Operation((Op::Multiplication, vec![node, self.eval_factor()]));
                 }
-                _ => {
-                    return node;
-                }
+
+                _ => return node,
             }
         }
     }
@@ -132,54 +108,59 @@ impl AST<'_> {
         };
 
         match self.tokenizer.peek() {
-            Some(Token::Operator(ch)) => {
-                if *ch == '^' {
-                    self.tokenizer.next();
-                    let exponent = self.tokenizer.next();
-                    match exponent {
-                        None => panic!("unexpected end of expression"),
-                        Some(mut exponent_candidate) => {
-                            let mut sign = 1.0;
-                            if let Token::Operator(ch) = exponent_candidate {
-                                if !['+', '-'].contains(&ch) {
-                                    panic!("unexpected token `{:?}`", exponent_candidate)
-                                }
-                                if ch == '-' {
-                                    sign *= -1.0;
-                                }
-                                match self.tokenizer.next() {
-                                    None => panic!("unexpected end of expression"),
-                                    Some(exponent) => match exponent {
-                                        Token::Number(_) => exponent_candidate = exponent,
-                                        _ => panic!("unexpected token `{:?}`", exponent),
-                                    },
-                                }
-                            }
-                            if let Token::Number(exponent) = exponent_candidate {
-                                if sign < 0.0 {
-                                    node = Node::Operation((
-                                        Op::Exponentiation,
-                                        vec![
-                                            node,
-                                            Node::Operation((
-                                                Op::Negation,
-                                                vec![Node::Number(exponent)],
-                                            )),
-                                        ],
-                                    ))
-                                } else {
-                                    node = Node::Operation((
-                                        Op::Exponentiation,
-                                        vec![node, Node::Number(exponent)],
-                                    ))
-                                }
-                            } else {
+            Some(Token::Operator('^')) => {
+                self.tokenizer.next();
+                let exponent = self.tokenizer.next();
+
+                match exponent {
+                    None => panic!("unexpected end of expression"),
+
+                    Some(mut exponent_candidate) => {
+                        let mut sign = 1.0;
+
+                        if let Token::Operator(ch) = exponent_candidate {
+                            if !['+', '-'].contains(&ch) {
                                 panic!("unexpected token `{:?}`", exponent_candidate)
                             }
+
+                            if ch == '-' {
+                                sign *= -1.0;
+                            }
+
+                            match self.tokenizer.next() {
+                                None => panic!("unexpected end of expression"),
+                                Some(exponent) => match exponent {
+                                    Token::Number(_) => exponent_candidate = exponent,
+                                    _ => panic!("unexpected token `{:?}`", exponent),
+                                },
+                            }
+                        }
+
+                        if let Token::Number(exponent) = exponent_candidate {
+                            if sign < 0.0 {
+                                node = Node::Operation((
+                                    Op::Exponentiation,
+                                    vec![
+                                        node,
+                                        Node::Operation((
+                                            Op::Negation,
+                                            vec![Node::Number(exponent)],
+                                        )),
+                                    ],
+                                ))
+                            } else {
+                                node = Node::Operation((
+                                    Op::Exponentiation,
+                                    vec![node, Node::Number(exponent)],
+                                ))
+                            }
+                        } else {
+                            panic!("unexpected token `{:?}`", exponent_candidate)
                         }
                     }
                 }
             }
+
             _ => (),
         };
 
