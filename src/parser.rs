@@ -75,7 +75,7 @@ impl Parser<'_> {
                     result /= self.eval_factor();
                 }
 
-                Token::Delimiter(Delimiter::Paranthesis(Side::Open)) => {
+                Token::Delimiter(Delimiter::Paranthesis(Side::Open)) | Token::Number(_) => {
                     result *= self.eval_factor();
                 }
 
@@ -107,41 +107,8 @@ impl Parser<'_> {
         match self.tokenizer.peek() {
             Some(Token::Operator('^')) => {
                 self.tokenizer.next();
-                let exponent = self.tokenizer.next();
-
-                match exponent {
-                    None => panic!("unexpected end of expression"),
-
-                    Some(mut exponent_candidate) => {
-                        let mut sign = 1.0;
-
-                        if let Token::Operator(ch) = exponent_candidate {
-                            if !['+', '-'].contains(&ch) {
-                                panic!("unexpected token `{:?}`", exponent_candidate)
-                            }
-
-                            if ch == '-' {
-                                sign *= -1.0;
-                            }
-
-                            match self.tokenizer.next() {
-                                None => panic!("unexpected end of expression"),
-                                Some(exponent) => match exponent {
-                                    Token::Number(_) => exponent_candidate = exponent,
-                                    _ => panic!("unexpected token `{:?}`", exponent),
-                                },
-                            }
-                        }
-
-                        if let Token::Number(exponent) = exponent_candidate {
-                            result = f64::powf(result, sign * exponent);
-                        } else {
-                            panic!("unexpected token `{:?}`", exponent_candidate)
-                        }
-                    }
-                }
+                result = f64::powf(result, self.eval_term());
             }
-
             _ => (),
         };
 

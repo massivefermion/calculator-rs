@@ -82,7 +82,7 @@ impl AST<'_> {
                     node = Node::Operation((Op::Division, vec![node, self.eval_factor()]));
                 }
 
-                Token::Delimiter(Delimiter::Paranthesis(Side::Open)) => {
+                Token::Delimiter(Delimiter::Paranthesis(Side::Open)) | Token::Number(_) => {
                     node = Node::Operation((Op::Multiplication, vec![node, self.eval_factor()]));
                 }
 
@@ -110,57 +110,8 @@ impl AST<'_> {
         match self.tokenizer.peek() {
             Some(Token::Operator('^')) => {
                 self.tokenizer.next();
-                let exponent = self.tokenizer.next();
-
-                match exponent {
-                    None => panic!("unexpected end of expression"),
-
-                    Some(mut exponent_candidate) => {
-                        let mut sign = 1.0;
-
-                        if let Token::Operator(ch) = exponent_candidate {
-                            if !['+', '-'].contains(&ch) {
-                                panic!("unexpected token `{:?}`", exponent_candidate)
-                            }
-
-                            if ch == '-' {
-                                sign *= -1.0;
-                            }
-
-                            match self.tokenizer.next() {
-                                None => panic!("unexpected end of expression"),
-                                Some(exponent) => match exponent {
-                                    Token::Number(_) => exponent_candidate = exponent,
-                                    _ => panic!("unexpected token `{:?}`", exponent),
-                                },
-                            }
-                        }
-
-                        if let Token::Number(exponent) = exponent_candidate {
-                            if sign < 0.0 {
-                                node = Node::Operation((
-                                    Op::Exponentiation,
-                                    vec![
-                                        node,
-                                        Node::Operation((
-                                            Op::Negation,
-                                            vec![Node::Number(exponent)],
-                                        )),
-                                    ],
-                                ))
-                            } else {
-                                node = Node::Operation((
-                                    Op::Exponentiation,
-                                    vec![node, Node::Number(exponent)],
-                                ))
-                            }
-                        } else {
-                            panic!("unexpected token `{:?}`", exponent_candidate)
-                        }
-                    }
-                }
+                node = Node::Operation((Op::Exponentiation, vec![node, self.eval_term()]));
             }
-
             _ => (),
         };
 
