@@ -89,6 +89,10 @@ impl Parser<'_> {
                         return result;
                     }
                 }
+                Token::Delimiter(Delimiter::Paranthesis(Side::Open)) => {
+                    let right_side = self.eval_factor();
+                    result *= right_side;
+                }
                 _ => {
                     return result;
                 }

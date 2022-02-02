@@ -104,6 +104,10 @@ impl AST<'_> {
                         return node;
                     }
                 }
+                Token::Delimiter(Delimiter::Paranthesis(Side::Open)) => {
+                    let other_operand = self.eval_factor();
+                    node = Node::Operation((Op::Multiplication, vec![node, other_operand]));
+                }
                 _ => {
                     return node;
                 }
