@@ -100,67 +100,52 @@ impl Parser<'_> {
         let token = self.tokenizer.next().unwrap();
         let mut result = match token {
             Token::Number(n) => n,
-            Token::Delimiter(delim) => match delim {
-                Delimiter::Paranthesis(side) => match side {
-                    Side::Open => {
-                        let result = self.eval_exp();
-                        let token = self.tokenizer.next();
-                        match token {
-                            None => panic!("unexpected end of expression"),
-                            Some(peeked) => match peeked {
-                                Token::Delimiter(delim) => match delim {
-                                    Delimiter::Paranthesis(side) => match side {
-                                        Side::Close => result,
-                                        _ => panic!("unexpected token `{:?}`", side),
-                                    },
-                                },
-                                _ => panic!("unexpected token `{:?}`", peeked),
-                            },
-                        }
-                    }
-                    _ => panic!("unexpected token `{:?}`", side),
-                },
-            },
+            Token::Delimiter(Delimiter::Paranthesis(Side::Open)) => {
+                let result = self.eval_exp();
+                let token = self.tokenizer.next();
+                match token {
+                    None => panic!("unexpected end of expression"),
+                    Some(Token::Delimiter(Delimiter::Paranthesis(Side::Close))) => result,
+                    _ => panic!("unexpected token `{:?}`", token),
+                }
+            }
             _ => panic!("unexpected token `{:?}`", token),
         };
 
         match self.tokenizer.peek() {
-            Some(token) => match token {
-                Token::Operator(ch) => {
-                    if *ch == '^' {
-                        self.tokenizer.next();
-                        let exponent = self.tokenizer.next();
-                        match exponent {
-                            None => panic!("unexpected end of expression"),
-                            Some(mut exponent_candidate) => {
-                                let mut sign = 1.0;
-                                if let Token::Operator(ch) = exponent_candidate {
-                                    if !['+', '-'].contains(&ch) {
-                                        panic!("unexpected token `{:?}`", exponent_candidate)
-                                    }
-                                    if ch == '-' {
-                                        sign *= -1.0;
-                                    }
-                                    match self.tokenizer.next() {
-                                        None => panic!("unexpected end of expression"),
-                                        Some(exponent) => match exponent {
-                                            Token::Number(_) => exponent_candidate = exponent,
-                                            _ => panic!("unexpected token `{:?}`", exponent),
-                                        },
-                                    }
-                                }
-                                if let Token::Number(exponent) = exponent_candidate {
-                                    result = f64::powf(result, sign * exponent);
-                                } else {
+            Some(Token::Operator(ch)) => {
+                if *ch == '^' {
+                    self.tokenizer.next();
+                    let exponent = self.tokenizer.next();
+                    match exponent {
+                        None => panic!("unexpected end of expression"),
+                        Some(mut exponent_candidate) => {
+                            let mut sign = 1.0;
+                            if let Token::Operator(ch) = exponent_candidate {
+                                if !['+', '-'].contains(&ch) {
                                     panic!("unexpected token `{:?}`", exponent_candidate)
                                 }
+                                if ch == '-' {
+                                    sign *= -1.0;
+                                }
+                                match self.tokenizer.next() {
+                                    None => panic!("unexpected end of expression"),
+                                    Some(exponent) => match exponent {
+                                        Token::Number(_) => exponent_candidate = exponent,
+                                        _ => panic!("unexpected token `{:?}`", exponent),
+                                    },
+                                }
+                            }
+                            if let Token::Number(exponent) = exponent_candidate {
+                                result = f64::powf(result, sign * exponent);
+                            } else {
+                                panic!("unexpected token `{:?}`", exponent_candidate)
                             }
                         }
                     }
                 }
-                _ => (),
-            },
-            None => (),
+            }
+            _ => (),
         };
 
         return result;
