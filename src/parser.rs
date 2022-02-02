@@ -13,39 +13,33 @@ impl Parser<'_> {
     }
 
     pub fn eval(&mut self) -> f64 {
-        if self.tokenizer.peek().is_none() {
-            panic!("no expression given");
-        }
         self.eval_exp()
     }
 
     fn eval_exp(&mut self) -> f64 {
-        let peeked = self.tokenizer.peek().unwrap();
+        let peeked = self.tokenizer.peek();
 
-        let mut sign = 1.0;
-        if let Token::Operator(ch) = peeked {
-            if *ch == '-' {
-                sign *= -1.0;
+        let sign = match peeked {
+            None => panic!("unexpected end of expression"),
+            Some(Token::Operator('-')) => {
                 self.tokenizer.next();
+                -1.0
             }
-        }
+            _ => 1.0,
+        };
 
         let mut result = self.eval_term();
         result *= sign;
 
         loop {
-            if self.tokenizer.peek().is_none() {
-                return result;
-            }
-
-            let peeked = self.tokenizer.peek().unwrap().clone();
+            let peeked = self.tokenizer.peek();
             match peeked {
-                Token::Operator('+') => {
+                Some(Token::Operator('+')) => {
                     self.tokenizer.next();
                     result += self.eval_term();
                 }
 
-                Token::Operator('-') => {
+                Some(Token::Operator('-')) => {
                     self.tokenizer.next();
                     result -= self.eval_term();
                 }
@@ -59,23 +53,20 @@ impl Parser<'_> {
         let mut result = self.eval_factor();
 
         loop {
-            if self.tokenizer.peek().is_none() {
-                return result;
-            }
-
-            let peeked = self.tokenizer.peek().unwrap().clone();
+            let peeked = self.tokenizer.peek();
             match peeked {
-                Token::Operator('*') => {
+                Some(Token::Operator('*')) => {
                     self.tokenizer.next();
                     result *= self.eval_factor();
                 }
 
-                Token::Operator('/') => {
+                Some(Token::Operator('/')) => {
                     self.tokenizer.next();
                     result /= self.eval_factor();
                 }
 
-                Token::Delimiter(Delimiter::Paranthesis(Side::Open)) | Token::Number(_) => {
+                Some(Token::Delimiter(Delimiter::Paranthesis(Side::Open)))
+                | Some(Token::Number(_)) => {
                     result *= self.eval_factor();
                 }
 
@@ -85,12 +76,12 @@ impl Parser<'_> {
     }
 
     fn eval_factor(&mut self) -> f64 {
-        let token = self.tokenizer.next().unwrap();
+        let token = self.tokenizer.next();
 
         let mut result = match token {
-            Token::Number(n) => n,
+            Some(Token::Number(n)) => n,
 
-            Token::Delimiter(Delimiter::Paranthesis(Side::Open)) => {
+            Some(Token::Delimiter(Delimiter::Paranthesis(Side::Open))) => {
                 let result = self.eval_exp();
                 let token = self.tokenizer.next();
 
@@ -100,7 +91,7 @@ impl Parser<'_> {
                     _ => panic!("unexpected token `{:?}`", token),
                 }
             }
-
+            None => panic!("unexpected end of expression"),
             _ => panic!("unexpected token `{:?}`", token),
         };
 
