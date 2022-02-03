@@ -7,8 +7,11 @@ mod utils;
 use crate::ast::AST;
 use crate::parser::Parser;
 use std::env;
+use std::panic;
 
 fn main() {
+    panic::set_hook(Box::new(|msg| println!("{}", msg)));
+
     let args: Vec<String> = env::args().collect();
     if args.len() < 3 {
         panic!("not enough input");

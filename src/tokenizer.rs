@@ -63,13 +63,18 @@ impl Iterator for Tokenizer<'_> {
             let peeked = self.expression.peek();
             self.storage.push(current);
             match peeked {
-                None => (),
+                None => {
+                    if current == 'e' || current == '-' {
+                        panic!("unexpected end of expression");
+                    }
+                }
                 Some(ch) => {
                     if ch.is_whitespace() || OPERATORS.contains(ch) || DELIMITERS.contains(ch) {
-                        if *ch == '-' && current == 'e' {
-                            continue;
+                        if current == 'e' {
+                            if *ch == '-' {
+                                continue;
+                            }
                         }
-                        ()
                     } else {
                         continue;
                     }
