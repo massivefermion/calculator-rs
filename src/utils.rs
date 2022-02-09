@@ -4,19 +4,19 @@ pub const OPERATORS: [char; 5] = ['^', '*', '/', '+', '-'];
 pub const DELIMITERS: [char; 2] = ['(', ')'];
 pub const DECIMALS: [char; 2] = ['e', '.'];
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum Token {
     Number(f64),
     Operator(char),
     Delimiter(Delimiter),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum Delimiter {
     Paranthesis(Side),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum Side {
     Open,
     Close,
