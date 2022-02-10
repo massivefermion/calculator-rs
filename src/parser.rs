@@ -1,5 +1,5 @@
 use crate::tokenizer::Tokenizer;
-use crate::utils::{Delimiter, Side, Token};
+use crate::utils::{Delimiter, Side, Token, TokenType};
 use std::iter::Peekable;
 
 pub struct Parser<'a> {
@@ -8,10 +8,9 @@ pub struct Parser<'a> {
 
 impl Parser<'_> {
     pub fn new(expr: &str) -> Parser {
-        let tokenizer = Tokenizer::new(expr).peekable();
+        let tokenizer = Tokenizer::new(expr);
         Parser { tokenizer }
     }
-
     pub fn eval(&mut self) -> f64 {
         self.eval_exp()
     }
@@ -21,7 +20,10 @@ impl Parser<'_> {
 
         let sign = match peeked {
             None => panic!("unexpected end of expression"),
-            Some(Token::Operator('-')) => {
+            Some(Token {
+                pos: _,
+                token: TokenType::Operator('-'),
+            }) => {
                 self.tokenizer.next();
                 -1.0
             }
@@ -34,12 +36,18 @@ impl Parser<'_> {
         loop {
             let peeked = self.tokenizer.peek();
             match peeked {
-                Some(Token::Operator('+')) => {
+                Some(Token {
+                    pos: _,
+                    token: TokenType::Operator('+'),
+                }) => {
                     self.tokenizer.next();
                     result += self.eval_term();
                 }
 
-                Some(Token::Operator('-')) => {
+                Some(Token {
+                    pos: _,
+                    token: TokenType::Operator('-'),
+                }) => {
                     self.tokenizer.next();
                     result -= self.eval_term();
                 }
@@ -55,18 +63,30 @@ impl Parser<'_> {
         loop {
             let peeked = self.tokenizer.peek();
             match peeked {
-                Some(Token::Operator('*')) => {
+                Some(Token {
+                    pos: _,
+                    token: TokenType::Operator('*'),
+                }) => {
                     self.tokenizer.next();
                     result *= self.eval_factor();
                 }
 
-                Some(Token::Operator('/')) => {
+                Some(Token {
+                    pos: _,
+                    token: TokenType::Operator('/'),
+                }) => {
                     self.tokenizer.next();
                     result /= self.eval_factor();
                 }
 
-                Some(Token::Delimiter(Delimiter::Paranthesis(Side::Open)))
-                | Some(Token::Number(_)) => {
+                Some(Token {
+                    pos: _,
+                    token: TokenType::Delimiter(Delimiter::Paranthesis(Side::Open)),
+                })
+                | Some(Token {
+                    pos: _,
+                    token: TokenType::Number(_),
+                }) => {
                     result *= self.eval_factor();
                 }
 
@@ -79,24 +99,38 @@ impl Parser<'_> {
         let token = self.tokenizer.next();
 
         let mut result = match token {
-            Some(Token::Number(n)) => n,
+            Some(Token {
+                pos: _,
+                token: TokenType::Number(n),
+            }) => n,
 
-            Some(Token::Delimiter(Delimiter::Paranthesis(Side::Open))) => {
+            Some(Token {
+                pos: _,
+                token: TokenType::Delimiter(Delimiter::Paranthesis(Side::Open)),
+            }) => {
                 let result = self.eval_exp();
                 let token = self.tokenizer.next();
 
                 match token {
                     None => panic!("unexpected end of expression"),
-                    Some(Token::Delimiter(Delimiter::Paranthesis(Side::Close))) => result,
-                    _ => panic!("unexpected token `{:?}`", token),
+                    Some(Token {
+                        pos: _,
+                        token: TokenType::Delimiter(Delimiter::Paranthesis(Side::Close)),
+                    }) => result,
+                    Some(Token { pos, token }) => {
+                        panic!("unexpected token `{:?}` at {}", token, pos)
+                    }
                 }
             }
             None => panic!("unexpected end of expression"),
-            _ => panic!("unexpected token `{:?}`", token),
+            Some(Token { pos, token }) => panic!("unexpected token `{:?}` at {}", token, pos),
         };
 
         match self.tokenizer.peek() {
-            Some(Token::Operator('^')) => {
+            Some(Token {
+                pos: _,
+                token: TokenType::Operator('^'),
+            }) => {
                 self.tokenizer.next();
                 result = f64::powf(result, self.eval_factor());
             }

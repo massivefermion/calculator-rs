@@ -5,7 +5,13 @@ pub const DELIMITERS: [char; 2] = ['(', ')'];
 pub const DECIMALS: [char; 2] = ['e', '.'];
 
 #[derive(Debug)]
-pub enum Token {
+pub struct Token {
+    pub pos: usize,
+    pub token: TokenType,
+}
+
+#[derive(Debug)]
+pub enum TokenType {
     Number(f64),
     Operator(char),
     Delimiter(Delimiter),
@@ -23,8 +29,14 @@ pub enum Side {
 }
 
 #[derive(Debug, Serialize)]
-pub enum Node {
-    Operation((Op, Vec<Node>)),
+pub struct Node {
+    pub pos: usize,
+    pub node: NodeType,
+}
+
+#[derive(Debug, Serialize)]
+pub enum NodeType {
+    Operation(Op, Vec<Node>),
     Number(f64),
 }
 

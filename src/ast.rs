@@ -1,5 +1,5 @@
 use crate::tokenizer::Tokenizer;
-use crate::utils::{Delimiter, Node, Op, Side, Token};
+use crate::utils::{Delimiter, Node, NodeType, Op, Side, Token, TokenType};
 use std::iter::Peekable;
 
 pub struct AST<'a> {
@@ -8,7 +8,7 @@ pub struct AST<'a> {
 
 impl AST<'_> {
     pub fn new(expr: &str) -> AST {
-        let tokenizer = Tokenizer::new(expr).peekable();
+        let tokenizer = Tokenizer::new(expr);
         AST { tokenizer }
     }
 
@@ -17,33 +17,45 @@ impl AST<'_> {
     }
 
     fn eval_exp(&mut self) -> Node {
-        let peeked = self.tokenizer.peek();
-
-        let op = match peeked {
+        let (pos, peeked_token) = match self.tokenizer.peek() {
             None => panic!("unexpected end of expression"),
-            Some(Token::Operator('-')) => {
+            Some(Token { pos, token }) => (pos, token),
+        };
+        let pos = *pos;
+
+        let mut node = match peeked_token {
+            TokenType::Operator('-') => {
                 self.tokenizer.next();
-                Some(Op::Negation)
+                Node {
+                    pos,
+                    node: NodeType::Operation(Op::Negation, vec![self.eval_term()]),
+                }
             }
-            _ => None,
+            _ => self.eval_term(),
         };
 
-        let mut node = self.eval_term();
-        if let Some(Op::Negation) = op {
-            node = Node::Operation((Op::Negation, vec![node]));
-        }
-
         loop {
-            let peeked = self.tokenizer.peek();
-            match peeked {
-                Some(Token::Operator('+')) => {
+            let (pos, peeked_token) = match self.tokenizer.peek() {
+                None => return node,
+                Some(Token { pos, token }) => (pos, token),
+            };
+            let pos = *pos;
+
+            match peeked_token {
+                TokenType::Operator('+') => {
                     self.tokenizer.next();
-                    node = Node::Operation((Op::Addition, vec![node, self.eval_term()]));
+                    node = Node {
+                        pos,
+                        node: NodeType::Operation(Op::Addition, vec![node, self.eval_term()]),
+                    }
                 }
 
-                Some(Token::Operator('-')) => {
+                TokenType::Operator('-') => {
                     self.tokenizer.next();
-                    node = Node::Operation((Op::Subtraction, vec![node, self.eval_term()]));
+                    node = Node {
+                        pos,
+                        node: NodeType::Operation(Op::Subtraction, vec![node, self.eval_term()]),
+                    }
                 }
 
                 _ => return node,
@@ -55,21 +67,40 @@ impl AST<'_> {
         let mut node = self.eval_factor();
 
         loop {
-            let peeked = self.tokenizer.peek();
-            match peeked {
-                Some(Token::Operator('*')) => {
+            let (pos, peeked_token) = match self.tokenizer.peek() {
+                None => return node,
+                Some(Token { pos, token }) => (pos, token),
+            };
+            let pos = *pos;
+
+            match peeked_token {
+                TokenType::Operator('*') => {
                     self.tokenizer.next();
-                    node = Node::Operation((Op::Multiplication, vec![node, self.eval_factor()]));
+                    node = Node {
+                        pos,
+                        node: NodeType::Operation(
+                            Op::Multiplication,
+                            vec![node, self.eval_factor()],
+                        ),
+                    };
                 }
 
-                Some(Token::Operator('/')) => {
+                TokenType::Operator('/') => {
                     self.tokenizer.next();
-                    node = Node::Operation((Op::Division, vec![node, self.eval_factor()]));
+                    node = Node {
+                        pos,
+                        node: NodeType::Operation(Op::Division, vec![node, self.eval_factor()]),
+                    };
                 }
 
-                Some(Token::Delimiter(Delimiter::Paranthesis(Side::Open)))
-                | Some(Token::Number(_)) => {
-                    node = Node::Operation((Op::Multiplication, vec![node, self.eval_factor()]));
+                TokenType::Delimiter(Delimiter::Paranthesis(Side::Open)) | TokenType::Number(_) => {
+                    node = Node {
+                        pos,
+                        node: NodeType::Operation(
+                            Op::Multiplication,
+                            vec![node, self.eval_factor()],
+                        ),
+                    };
                 }
 
                 _ => return node,
@@ -80,31 +111,50 @@ impl AST<'_> {
     fn eval_factor(&mut self) -> Node {
         let token = self.tokenizer.next();
 
-        let mut node = match token {
-            Some(Token::Number(n)) => Node::Number(n),
+        let node = match token {
+            Some(Token {
+                pos,
+                token: TokenType::Number(n),
+            }) => Node {
+                pos,
+                node: NodeType::Number(n),
+            },
 
-            Some(Token::Delimiter(Delimiter::Paranthesis(Side::Open))) => {
+            Some(Token {
+                pos: _,
+                token: TokenType::Delimiter(Delimiter::Paranthesis(Side::Open)),
+            }) => {
                 let node = self.eval_exp();
                 let token = self.tokenizer.next();
 
                 match token {
                     None => panic!("unexpected end of expression"),
-                    Some(Token::Delimiter(Delimiter::Paranthesis(Side::Close))) => node,
+                    Some(Token {
+                        pos: _,
+                        token: TokenType::Delimiter(Delimiter::Paranthesis(Side::Close)),
+                    }) => node,
                     _ => panic!("unexpected token `{:?}`", token),
                 }
             }
+            Some(Token { pos, token }) => panic!("unexpected token `{:?}` at {}", token, pos),
             None => panic!("unexpected end of expression"),
-            _ => panic!("unexpected token `{:?}`", token),
         };
 
-        match self.tokenizer.peek() {
-            Some(Token::Operator('^')) => {
+        let (pos, peeked_token) = match self.tokenizer.peek() {
+            None => return node,
+            Some(Token { pos, token }) => (pos, token),
+        };
+        let pos = *pos;
+
+        match peeked_token {
+            TokenType::Operator('^') => {
                 self.tokenizer.next();
-                node = Node::Operation((Op::Exponentiation, vec![node, self.eval_factor()]));
+                Node {
+                    pos,
+                    node: NodeType::Operation(Op::Exponentiation, vec![node, self.eval_factor()]),
+                }
             }
-            _ => (),
-        };
-
-        return node;
+            _ => return node,
+        }
     }
 }
