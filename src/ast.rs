@@ -17,21 +17,15 @@ impl AST<'_> {
     }
 
     fn eval_exp(&mut self) -> Node {
-        let (pos, peeked_token) = match self.tokenizer.peek() {
-            None => panic!("unexpected end of expression"),
-            Some(Token { pos, token }) => (pos, token),
-        };
-        let pos = *pos;
-
-        let mut node = match peeked_token {
-            TokenType::Operator('-') => {
-                self.tokenizer.next();
-                Node {
-                    pos,
-                    node: NodeType::Operation(Op::Negation, vec![self.eval_term()]),
-                }
+        let sign = self.eval_sign(1.0);
+        let mut node = if sign == -1.0 {
+            self.tokenizer.next();
+            Node {
+                pos: 0.0 as usize,
+                node: NodeType::Operation(Op::Negation, vec![self.eval_term()]),
             }
-            _ => self.eval_term(),
+        } else {
+            self.eval_term()
         };
 
         loop {
@@ -44,18 +38,49 @@ impl AST<'_> {
             match peeked_token {
                 TokenType::Operator('+') => {
                     self.tokenizer.next();
-                    node = Node {
-                        pos,
-                        node: NodeType::Operation(Op::Addition, vec![node, self.eval_term()]),
-                    }
+                    let sign = self.eval_sign(1.0);
+                    node = if sign == -1.0 {
+                        Node {
+                            pos,
+                            node: NodeType::Operation(
+                                Op::Addition,
+                                vec![Node {
+                                    pos: pos - 1,
+                                    node: NodeType::Operation(Op::Negation, vec![self.eval_term()]),
+                                }],
+                            ),
+                        }
+                    } else {
+                        Node {
+                            pos,
+                            node: NodeType::Operation(Op::Addition, vec![node, self.eval_term()]),
+                        }
+                    };
                 }
 
                 TokenType::Operator('-') => {
                     self.tokenizer.next();
-                    node = Node {
-                        pos,
-                        node: NodeType::Operation(Op::Subtraction, vec![node, self.eval_term()]),
-                    }
+                    let sign = self.eval_sign(1.0);
+                    node = if sign == -1.0 {
+                        Node {
+                            pos,
+                            node: NodeType::Operation(
+                                Op::Subtraction,
+                                vec![Node {
+                                    pos: pos - 1,
+                                    node: NodeType::Operation(Op::Negation, vec![self.eval_term()]),
+                                }],
+                            ),
+                        }
+                    } else {
+                        Node {
+                            pos,
+                            node: NodeType::Operation(
+                                Op::Subtraction,
+                                vec![node, self.eval_term()],
+                            ),
+                        }
+                    };
                 }
 
                 _ => return node,
@@ -76,20 +101,48 @@ impl AST<'_> {
             match peeked_token {
                 TokenType::Operator('*') => {
                     self.tokenizer.next();
-                    node = Node {
-                        pos,
-                        node: NodeType::Operation(
-                            Op::Multiplication,
-                            vec![node, self.eval_factor()],
-                        ),
+                    let sign = self.eval_sign(1.0);
+                    node = if sign == -1.0 {
+                        Node {
+                            pos,
+                            node: NodeType::Operation(
+                                Op::Multiplication,
+                                vec![Node {
+                                    pos: pos - 1,
+                                    node: NodeType::Operation(Op::Negation, vec![self.eval_term()]),
+                                }],
+                            ),
+                        }
+                    } else {
+                        Node {
+                            pos,
+                            node: NodeType::Operation(
+                                Op::Multiplication,
+                                vec![node, self.eval_term()],
+                            ),
+                        }
                     };
                 }
 
                 TokenType::Operator('/') => {
                     self.tokenizer.next();
-                    node = Node {
-                        pos,
-                        node: NodeType::Operation(Op::Division, vec![node, self.eval_factor()]),
+                    let sign = self.eval_sign(1.0);
+                    node = if sign == -1.0 {
+                        Node {
+                            pos,
+                            node: NodeType::Operation(
+                                Op::Addition,
+                                vec![Node {
+                                    pos: pos - 1,
+                                    node: NodeType::Operation(Op::Division, vec![self.eval_term()]),
+                                }],
+                            ),
+                        }
+                    } else {
+                        Node {
+                            pos,
+                            node: NodeType::Operation(Op::Division, vec![node, self.eval_term()]),
+                        }
                     };
                 }
 
@@ -109,9 +162,7 @@ impl AST<'_> {
     }
 
     fn eval_factor(&mut self) -> Node {
-        let token = self.tokenizer.next();
-
-        let node = match token {
+        let node = match self.tokenizer.next() {
             Some(Token {
                 pos,
                 token: TokenType::Number(n),
@@ -125,15 +176,13 @@ impl AST<'_> {
                 token: TokenType::Delimiter(Delimiter::Paranthesis(Side::Open)),
             }) => {
                 let node = self.eval_exp();
-                let token = self.tokenizer.next();
-
-                match token {
+                match self.tokenizer.next() {
                     None => panic!("unexpected end of expression"),
                     Some(Token {
                         pos: _,
                         token: TokenType::Delimiter(Delimiter::Paranthesis(Side::Close)),
                     }) => node,
-                    _ => panic!("unexpected token `{:?}`", token),
+                    token => panic!("unexpected token `{:?}`", token),
                 }
             }
             Some(Token { pos, token }) => panic!("unexpected token `{:?}` at {}", token, pos),
@@ -155,6 +204,27 @@ impl AST<'_> {
                 }
             }
             _ => return node,
+        }
+    }
+
+    fn eval_sign(&mut self, sign: f64) -> f64 {
+        match self.tokenizer.peek() {
+            None => panic!("unexpected end of expression"),
+            Some(Token {
+                pos: _,
+                token: TokenType::Operator('-'),
+            }) => {
+                self.tokenizer.next();
+                self.eval_sign(-1.0 * sign)
+            }
+            Some(Token {
+                pos: _,
+                token: TokenType::Operator('+'),
+            }) => {
+                self.tokenizer.next();
+                self.eval_sign(sign)
+            }
+            _ => sign,
         }
     }
 }

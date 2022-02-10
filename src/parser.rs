@@ -16,32 +16,19 @@ impl Parser<'_> {
     }
 
     fn eval_exp(&mut self) -> f64 {
-        let peeked = self.tokenizer.peek();
-
-        let sign = match peeked {
-            None => panic!("unexpected end of expression"),
-            Some(Token {
-                pos: _,
-                token: TokenType::Operator('-'),
-            }) => {
-                self.tokenizer.next();
-                -1.0
-            }
-            _ => 1.0,
-        };
-
+        let sign = self.eval_sign(1.0);
         let mut result = self.eval_term();
         result *= sign;
 
         loop {
-            let peeked = self.tokenizer.peek();
-            match peeked {
+            match self.tokenizer.peek() {
                 Some(Token {
                     pos: _,
                     token: TokenType::Operator('+'),
                 }) => {
                     self.tokenizer.next();
-                    result += self.eval_term();
+                    let sign = self.eval_sign(1.0);
+                    result += sign * self.eval_term();
                 }
 
                 Some(Token {
@@ -49,7 +36,8 @@ impl Parser<'_> {
                     token: TokenType::Operator('-'),
                 }) => {
                     self.tokenizer.next();
-                    result -= self.eval_term();
+                    let sign = self.eval_sign(1.0);
+                    result -= sign * self.eval_term();
                 }
 
                 _ => return result,
@@ -61,14 +49,14 @@ impl Parser<'_> {
         let mut result = self.eval_factor();
 
         loop {
-            let peeked = self.tokenizer.peek();
-            match peeked {
+            match self.tokenizer.peek() {
                 Some(Token {
                     pos: _,
                     token: TokenType::Operator('*'),
                 }) => {
                     self.tokenizer.next();
-                    result *= self.eval_factor();
+                    let sign = self.eval_sign(1.0);
+                    result *= sign * self.eval_factor();
                 }
 
                 Some(Token {
@@ -76,7 +64,8 @@ impl Parser<'_> {
                     token: TokenType::Operator('/'),
                 }) => {
                     self.tokenizer.next();
-                    result /= self.eval_factor();
+                    let sign = self.eval_sign(1.0);
+                    result /= sign * self.eval_factor();
                 }
 
                 Some(Token {
@@ -96,9 +85,7 @@ impl Parser<'_> {
     }
 
     fn eval_factor(&mut self) -> f64 {
-        let token = self.tokenizer.next();
-
-        let mut result = match token {
+        let result = match self.tokenizer.next() {
             Some(Token {
                 pos: _,
                 token: TokenType::Number(n),
@@ -132,11 +119,31 @@ impl Parser<'_> {
                 token: TokenType::Operator('^'),
             }) => {
                 self.tokenizer.next();
-                result = f64::powf(result, self.eval_factor());
+                let sign = self.eval_sign(1.0);
+                f64::powf(result, sign * self.eval_factor())
             }
-            _ => (),
-        };
+            _ => return result,
+        }
+    }
 
-        return result;
+    fn eval_sign(&mut self, sign: f64) -> f64 {
+        match self.tokenizer.peek() {
+            None => panic!("unexpected end of expression"),
+            Some(Token {
+                pos: _,
+                token: TokenType::Operator('-'),
+            }) => {
+                self.tokenizer.next();
+                self.eval_sign(-1.0 * sign)
+            }
+            Some(Token {
+                pos: _,
+                token: TokenType::Operator('+'),
+            }) => {
+                self.tokenizer.next();
+                self.eval_sign(sign)
+            }
+            _ => sign,
+        }
     }
 }
