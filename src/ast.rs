@@ -44,10 +44,16 @@ impl AST<'_> {
                             pos,
                             node: NodeType::Operation(
                                 Op::Addition,
-                                vec![Node {
-                                    pos: pos - 1,
-                                    node: NodeType::Operation(Op::Negation, vec![self.eval_term()]),
-                                }],
+                                vec![
+                                    node,
+                                    Node {
+                                        pos: pos - 1,
+                                        node: NodeType::Operation(
+                                            Op::Negation,
+                                            vec![self.eval_term()],
+                                        ),
+                                    },
+                                ],
                             ),
                         }
                     } else {
@@ -66,10 +72,16 @@ impl AST<'_> {
                             pos,
                             node: NodeType::Operation(
                                 Op::Subtraction,
-                                vec![Node {
-                                    pos: pos - 1,
-                                    node: NodeType::Operation(Op::Negation, vec![self.eval_term()]),
-                                }],
+                                vec![
+                                    node,
+                                    Node {
+                                        pos: pos - 1,
+                                        node: NodeType::Operation(
+                                            Op::Negation,
+                                            vec![self.eval_term()],
+                                        ),
+                                    },
+                                ],
                             ),
                         }
                     } else {
@@ -107,10 +119,16 @@ impl AST<'_> {
                             pos,
                             node: NodeType::Operation(
                                 Op::Multiplication,
-                                vec![Node {
-                                    pos: pos - 1,
-                                    node: NodeType::Operation(Op::Negation, vec![self.eval_term()]),
-                                }],
+                                vec![
+                                    node,
+                                    Node {
+                                        pos: pos - 1,
+                                        node: NodeType::Operation(
+                                            Op::Negation,
+                                            vec![self.eval_term()],
+                                        ),
+                                    },
+                                ],
                             ),
                         }
                     } else {
@@ -132,10 +150,16 @@ impl AST<'_> {
                             pos,
                             node: NodeType::Operation(
                                 Op::Addition,
-                                vec![Node {
-                                    pos: pos - 1,
-                                    node: NodeType::Operation(Op::Division, vec![self.eval_term()]),
-                                }],
+                                vec![
+                                    node,
+                                    Node {
+                                        pos: pos - 1,
+                                        node: NodeType::Operation(
+                                            Op::Division,
+                                            vec![self.eval_term()],
+                                        ),
+                                    },
+                                ],
                             ),
                         }
                     } else {
